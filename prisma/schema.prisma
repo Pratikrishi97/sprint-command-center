@@ -1,0 +1,141 @@
+// Sprint Command Center — Prisma schema
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Uncomment if you use Neon's pooled URL for DATABASE_URL and need a
+  // direct connection for migrations (avoids "prepared statement" errors).
+  // directUrl = env("DIRECT_URL")
+}
+
+model Sprint {
+  id            String   @id @default(cuid())
+  number        Int      @unique
+  name          String
+  startDate     String   // ISO date (Tuesday)
+  endDate       String   // ISO date (two Tuesdays later)
+  status        String   @default("active") // active | upcoming | completed
+  goals         String   @default("[]") // JSON array of strings
+  objectives    String   @default("[]") // JSON
+  retrospective String   @default("") // markdown
+  lessonsLearned String  @default("[]") // JSON
+  actionItems   String   @default("[]") // JSON
+  risks         String   @default("[]") // JSON
+  achievements  String   @default("[]") // JSON
+  documents     String   @default("[]") // JSON
+  capacity      Float    @default(0) // planned story points / hours
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tasks         Task[]
+  notes         Note[]
+  dailyUpdates  DailyUpdate[]
+}
+
+model Employee {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  role         String   @default("Engineer")
+  team         String   @default("Core")
+  color        String   @default("emerald") // tailwind-ish token name
+  avatarUrl    String?
+  managerId    String?
+  manager      Employee? @relation("ManagerTeam", fields: [managerId], references: [id])
+  reports      Employee[] @relation("ManagerTeam")
+  capacity     Float    @default(40) // hours/week
+  availability Float    @default(100) // percent
+  timezone     String   @default("Asia/Calcutta")
+  skills       String   @default("[]") // JSON array
+  workingDays  String   @default("[1,2,3,4,5]") // JSON array of weekday nums
+  leaves       String   @default("[]") // JSON array of {date, reason}
+  projects     String   @default("[]") // JSON
+  status       String   @default("active") // active | inactive
+  joinedAt     String   @default("") // ISO date
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasks        Task[]
+  dailyUpdates DailyUpdate[]
+  notes        Note[]
+}
+
+model Task {
+  id                 String   @id @default(cuid())
+  title              String
+  description        String   @default("")
+  priority           String   @default("medium") // low | medium | high | critical
+  severity           String   @default("normal") // trivial | normal | major | critical
+  category           String   @default("feature") // feature | bug | chore | research | infra | design
+  project            String   @default("Core")
+  epic               String   @default("")
+  story              String   @default("")
+  sprintId           String?
+  sprint             Sprint?  @relation(fields: [sprintId], references: [id])
+  ownerId            String?
+  owner              Employee? @relation(fields: [ownerId], references: [id])
+  startDate          String   @default("")
+  endDate            String   @default("")
+  expectedCompletion String   @default("")
+  actualCompletion   String   @default("")
+  dependencies       String   @default("[]") // JSON task ids / titles
+  riskLevel          String   @default("low") // low | medium | high | critical
+  businessImpact     String   @default("medium") // low | medium | high
+  status             String   @default("not_started") // see TaskStatus union
+  tags               String   @default("[]") // JSON
+  remarks            String   @default("")
+  links              String   @default("[]") // JSON {label, url, type}
+  estimate           Float    @default(0) // story points
+  progress           Float    @default(0) // 0-100
+  order              Int      @default(0) // for board ordering
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  dailyUpdates       DailyUpdate[]
+  notes              Note[]
+}
+
+model DailyUpdate {
+  id               String   @id @default(cuid())
+  taskId           String?
+  task             Task?    @relation(fields: [taskId], references: [id])
+  employeeId       String
+  employee         Employee @relation(fields: [employeeId], references: [id])
+  sprintId         String?
+  sprint           Sprint?  @relation(fields: [sprintId], references: [id])
+  date             String   // ISO date
+  todayProgress    String   @default("")
+  yesterdayProgress String  @default("")
+  tomorrowPlan     String   @default("")
+  percentage       Float    @default(0) // 0-100
+  hoursWorked      Float    @default(0)
+  blockers         String   @default("")
+  risks            String   @default("")
+  managerNotes     String   @default("")
+  dependencies     String   @default("")
+  expectedFinish   String   @default("")
+  confidence       String   @default("medium") // low | medium | high
+  mood             String   @default("neutral") // great | good | neutral | stressed | blocked
+  accomplishments  String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  content    String
+  type       String   @default("general") // general | blocker | risk | achievement | retro
+  sprintId   String?
+  sprint     Sprint?  @relation(fields: [sprintId], references: [id])
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  taskId     String?
+  task       Task?    @relation(fields: [taskId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
